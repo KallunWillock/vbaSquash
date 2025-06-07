@@ -1,12 +1,12 @@
 # vbaSquash
-## vbaSquash - Compression routines for VBA
+## Compression routines for VBA
 
 `vbaSquash` leverages the built-in `cabinet.dll` functions available on Windows 8+, providing access to compression algorithms MSZIP, XPRESS, XPRESS_HUFF, and LZMS without external dependencies.
 
 ### 🛠️ Features:
 
 *   **Simple Interface:** Easy-to-use functions like `CompressBytes`, `DecompressBytes`, `CompressFile`, and `DecompressFile`.
-*   **No additional software:** Uses Windows' own compression routines for good performance and compression ratios.
+*   **No additional software:** Uses Windows' own compression routines.
 *   **Automatic Algorithm Detection (for files compressed by vbaSquash):** The library attempts to auto-detect the algorithm used if you're decompressing a file it previously compressed. This differs from other methods.
 
 
