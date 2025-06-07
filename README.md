@@ -12,6 +12,10 @@
 
 ### 🚀 Basic Usage
 
+I have included a short application which demonstrates the usage of the vbaSquash routines.
+
+![alt text](image.png)
+
 #### Compress a File
 ```vba
 Dim success As Boolean
