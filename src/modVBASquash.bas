@@ -74,8 +74,8 @@ Private Const ERROR_INSUFFICIENT_BUFFER As Long = 122&
   Private Declare Function apiWriteFile Lib "kernel32" Alias "WriteFile" (ByVal hFile As Long, ByRef lpBuffer As Any, ByVal nNumberOfBytesToWrite As Long, ByRef lpNumberOfBytesWritten As Long, ByVal lpOverlapped As Any) As Long
   Private Declare Function apiReadFile Lib "kernel32" Alias "ReadFile" (ByVal hFile As Long, ByRef lpBuffer As Any, ByVal nNumberOfBytesToRead As Long, ByRef lpNumberOfBytesRead As Long, ByVal lpOverlapped As Any) As Long
   Private Declare Function apiDeleteFile Lib "kernel32" Alias "DeleteFileW" (ByVal lpFileName As Long) As Long
-  Private Declare Function apiGetFileSizeEx Lib "kernel32" (ByVal hFile As Long, ByRef lpFileSize As Currency) As Long ' Currency for 64-bit integer
-  Private Declare Function apiCloseHandle Lib "kernel32" (ByVal hObject As Long) As Long
+  Private Declare Function apiGetFileSizeEx Lib "kernel32" Alias "GetFileSizeEx" (ByVal hFile As Long, ByRef lpFileSize As Currency) As Long
+  Private Declare Function apiCloseHandle Lib "kernel32" Alias "CloseHandle" (ByVal hObject As Long) As Long
   
   Private Declare Function GetLastError Lib "kernel32" () As Long
 #End If
@@ -259,10 +259,16 @@ ErrHandler:
 End Function
 
 Public Function ReadFile(ByVal TargetFilename As String, Optional ByVal BytesToRead As LongLong = -1, Optional ByVal ExpectString As Boolean = False) As Variant
-  Dim hFile As LongPtr, FileSize As LongLong, ActualBytesToRead As LongLong, BytesReadSuccessfully As Long, ResultApi As Long, Buffer() As Byte
+  Dim hFile As LongPtr, ActualBytesToRead As Long, BytesReadSuccessfully As Long, ResultApi As Long, Buffer() As Byte
+  #If VBA7 Then
+    Dim FileSize As LongLong
+  #Else
+    Dim FileSize As Currency
+  #End If
   
   On Error GoTo ErrHandler
   
+  If Len(TargetFilename) = 0 Then Exit Function
   If Dir(TargetFilename) = "" Or (GetAttr(TargetFilename) And vbDirectory) = vbDirectory Then Exit Function
   
   hFile = apiCreateFile(StrPtr(TargetFilename), GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0)
