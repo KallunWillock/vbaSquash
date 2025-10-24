@@ -5,7 +5,7 @@ Attribute VB_Name = "modvbaSquash"
 '
 '    AUTHOR:   Kallun Willock
 '    RESEARCH: MSDN - https://docs.microsoft.com/en-us/windows/win32/api/_cmpapi/
-'              Frank Schüler - https://foren.activevb.de/archiv/vb-classic/thread-410382/beitrag-410466/Komprimierung-im-BufferMode/
+'              Frank SchÃ¼ler - https://foren.activevb.de/archiv/vb-classic/thread-410382/beitrag-410466/Komprimierung-im-BufferMode/
 '              Tanner Helland - https://github.com/tannerhelland/VB6-Compression
 '
 '    NOTES:    - Uses Win32 APIs in the cabinet.dll library to compress and decompress data.
@@ -41,12 +41,14 @@ Private Const ERROR_INSUFFICIENT_BUFFER As Long = 122&
 #If VBA7 Then
   Private Declare PtrSafe Function CreateCompressor Lib "cabinet.dll" (ByVal Algorithm As Long, ByVal AllocationRoutines As LongPtr, ByRef hCompressor As LongPtr) As Long
   Private Declare PtrSafe Function CompressAPI Lib "cabinet.dll" Alias "Compress" (ByVal hCompressor As LongPtr, ByVal UncompressedData As LongPtr, ByVal UncompressedDataSize As Long, ByVal CompressedBuffer As LongPtr, ByVal CompressedBufferSize As Long, ByRef CompressedDataSizeRequired As Long) As Long
+  Private Declare PtrSafe Function ResetCompressor Lib "cabinet.dll" (ByVal hCompressor As LongPtr) As Long
   Private Declare PtrSafe Function CloseCompressor Lib "cabinet.dll" (ByVal hCompressor As LongPtr) As Long
-  
+
   Private Declare PtrSafe Function CreateDecompressor Lib "cabinet.dll" (ByVal Algorithm As Long, ByVal AllocationRoutines As LongPtr, ByRef hDecompressor As LongPtr) As Long
   Private Declare PtrSafe Function DecompressAPI Lib "cabinet.dll" Alias "Decompress" (ByVal hDecompressor As LongPtr, ByVal CompressedData As LongPtr, ByVal CompressedDataSize As Long, ByVal UncompressedBuffer As LongPtr, ByVal UncompressedBufferSize As Long, ByRef UncompressedDataSizeRequired As Long) As Long
+  Private Declare PtrSafe Function ResetDecompressor Lib "cabinet.dll" (ByVal hDecompressor As LongPtr) As Long
   Private Declare PtrSafe Function CloseDecompressor Lib "cabinet.dll" (ByVal hDecompressor As LongPtr) As Long
-  
+
   Private Declare PtrSafe Function apiCreateFile Lib "kernel32" Alias "CreateFileW" (ByVal lpFileName As LongPtr, ByVal dwDesiredAccess As Long, ByVal dwShareMode As Long, ByVal lpSecurityAttributes As LongPtr, ByVal dwCreationDisposition As Long, ByVal dwFlagsAndAttributes As Long, ByVal hTemplateFile As LongPtr) As LongPtr
   Private Declare PtrSafe Function apiWriteFile Lib "kernel32" Alias "WriteFile" (ByVal hFile As LongPtr, ByVal lpBuffer As LongPtr, ByVal nNumberOfBytesToWrite As Long, Optional ByRef lpNumberOfBytesWritten As Long, Optional ByVal lpOverlapped As LongPtr) As Long
   Private Declare PtrSafe Function apiReadFile Lib "kernel32" Alias "ReadFile" (ByVal hFile As LongPtr, ByVal lpBuffer As LongPtr, ByVal nNumberOfBytesToRead As LongLong, ByRef lpNumberOfBytesRead As Long, ByVal lpOverlapped As LongPtr) As Long
@@ -64,10 +66,12 @@ Private Const ERROR_INSUFFICIENT_BUFFER As Long = 122&
   
   Private Declare Function CreateCompressor Lib "cabinet.dll" (ByVal Algorithm As Long, ByVal AllocationRoutines As Long, ByRef hCompressor As Long) As Long
   Private Declare Function CompressAPI Lib "cabinet.dll" Alias "Compress" (ByVal hCompressor As Long, ByVal UncompressedData As Long, ByVal UncompressedDataSize As Long, ByVal CompressedBuffer As Long, ByVal CompressedBufferSize As Long, ByRef CompressedDataSizeRequired As Long) As Long
+  Private Declare Function ResetCompressor Lib "cabinet.dll" (ByVal hCompressor As Long) As Long
   Private Declare Function CloseCompressor Lib "cabinet.dll" (ByVal hCompressor As Long) As Long
   
   Private Declare Function CreateDecompressor Lib "cabinet.dll" (ByVal Algorithm As Long, ByVal AllocationRoutines As Long, ByRef hDecompressor As Long) As Long
   Private Declare Function DecompressAPI Lib "cabinet.dll" Alias "Decompress" (ByVal hDecompressor As Long, ByVal CompressedData As Long, ByVal CompressedDataSize As Long, ByVal UncompressedBuffer As Long, ByVal UncompressedBufferSize As Long, ByRef UncompressedDataSizeRequired As Long) As Long
+  Private Declare Function ResetDecompressor Lib "cabinet.dll" (ByVal hDecompressor As Long) As Long
   Private Declare Function CloseDecompressor Lib "cabinet.dll" (ByVal hDecompressor As Long) As Long
   
   Private Declare Function apiCreateFile Lib "kernel32" Alias "CreateFileW" (ByVal lpFileName As Long, ByVal dwDesiredAccess As Long, ByVal dwShareMode As Long, ByVal lpSecurityAttributes As Long, ByVal dwCreationDisposition As Long, ByVal dwFlagsAndAttributes As Long, ByVal hTemplateFile As Long) As Long
