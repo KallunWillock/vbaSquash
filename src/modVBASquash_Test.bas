@@ -2,8 +2,9 @@ Attribute VB_Name = "modVBASquash_Test"
 Option Explicit
 
 ' TESTS WRITTEN BY GOOGLE GEMINI 2.5 PRO PREVIEW
-
+Private Squash As vbaSquash
 Sub RunFullCompressionTestSuite()
+    Set Squash = New vbaSquash
     Dim startTime As Double
     startTime = Timer
 
@@ -16,13 +17,17 @@ Sub RunFullCompressionTestSuite()
     TestSpecificAlgorithm XPRESS, "XPRESS"
     TestSpecificAlgorithm XPRESS_HUFF, "XPRESS_HUFF"
     TestSpecificAlgorithm LZMS, "LZMS"
+    TestSpecificAlgorithm RTL_LZNT1, "RTL_LZNT"
+    TestSpecificAlgorithm RTL_XPRESS, "RTL_XPRESS"
 
+    TestSpecificAlgorithm RTL_XPRESS_HUFFMAN, "RTL_XPRESS_HUFF"
     TestEdgeCases
 
     Debug.Print "======================================================"
     Debug.Print "vbaSquash COMPRESSION TEST SUITE COMPLETE"
     Debug.Print "Total time: " & Format(Timer - startTime, "0.000") & " seconds"
     Debug.Print "======================================================"
+    Set Squash = Nothing
 End Sub
 
 Private Sub TestSpecificAlgorithm(ByVal currentAlgorithm As COMPRESS_ALGORITHM_ENUM, ByVal algoName As String)
@@ -32,7 +37,7 @@ Private Sub TestSpecificAlgorithm(ByVal currentAlgorithm As COMPRESS_ALGORITHM_E
     Dim DecompressedData() As Byte
     Dim i As Long
     Dim s As String
-    Dim originalSize As Long, compSize As Long, decompSize As Long
+    Dim OriginalSize As Long, compSize As Long, decompSize As Long
     Dim overallSuccess As Boolean
     Dim testCaseSuccess As Boolean
 
@@ -62,15 +67,15 @@ Private Sub TestSpecificAlgorithm(ByVal currentAlgorithm As COMPRESS_ALGORITHM_E
     For i = LBound(testStrings) To UBound(testStrings)
         s = CStr(testStrings(i))
         testData = StrConv(s, vbFromUnicode) ' Convert to byte array (system ANSI)
-        originalSize = GetArrayElementCount(testData)
+        OriginalSize = GetArrayElementCount(testData)
         testCaseSuccess = True
 
-        Debug.Print "  Test Case " & i + 1 & ": Input Length (Chars) = " & Len(s) & ", Original Byte Size = " & originalSize
+        Debug.Print "  Test Case " & i + 1 & ": Input Length (Chars) = " & Len(s) & ", Original Byte Size = " & OriginalSize
 
         ' --- Compression ---
         Erase CompressedData
         On Error Resume Next ' Catch any direct errors from CompressBytes
-        CompressedData = CompressBytes(testData, currentAlgorithm)
+        CompressedData = Squash.CompressBytes(testData, currentAlgorithm)
         If Err.Number <> 0 Then
             Debug.Print "    COMPRESSION: FAILED (Runtime Error " & Err.Number & " in CompressBytes: " & Err.Description & ")"
             compSize = -1
@@ -79,7 +84,7 @@ Private Sub TestSpecificAlgorithm(ByVal currentAlgorithm As COMPRESS_ALGORITHM_E
         Else
             If IsArrayPopulated(CompressedData) Then
                 compSize = GetArrayElementCount(CompressedData)
-                Debug.Print "    COMPRESSION: Success. Compressed Size = " & compSize & " (" & Format(100 * compSize / originalSize, "0.0") & "%)"
+                Debug.Print "    COMPRESSION: Success. Compressed Size = " & compSize & " (" & Format(100 * compSize / OriginalSize, "0.0") & "%)"
                 If compSize > 0 And compSize >= 12 Then ' Check if large enough for header
                     If CompressedData(LBound(CompressedData)) = &HA And CompressedData(LBound(CompressedData) + 1) = &H51 Then
                         Debug.Print "      Header Signature (0A 51..): Present. Algo in header: " & CompressedData(LBound(CompressedData) + 7)
@@ -101,7 +106,7 @@ Private Sub TestSpecificAlgorithm(ByVal currentAlgorithm As COMPRESS_ALGORITHM_E
         If testCaseSuccess And compSize > 0 Then
             Erase DecompressedData
             Dim detectedAlgo As COMPRESS_ALGORITHM_ENUM
-            detectedAlgo = IsCompressed(CompressedData) ' Test IsCompressed
+            detectedAlgo = Squash.IsCompressed(CompressedData) ' Test IsCompressed
 
             If detectedAlgo <> currentAlgorithm Then
                 Debug.Print "    DECOMPRESSION: IsCompressed detected " & detectedAlgo & ", expected " & currentAlgorithm & ". Proceeding with original algo."
@@ -111,7 +116,7 @@ Private Sub TestSpecificAlgorithm(ByVal currentAlgorithm As COMPRESS_ALGORITHM_E
             
             On Error Resume Next
             ' Using the original algorithm for decompression in this test for directness
-            DecompressedData = DecompressBytes(CompressedData, currentAlgorithm)
+            DecompressedData = Squash.DecompressBytes(CompressedData, currentAlgorithm)
             If Err.Number <> 0 Then
                 Debug.Print "    DECOMPRESSION: FAILED (Runtime Error " & Err.Number & " in DecompressBytes: " & Err.Description & ")"
                 decompSize = -1
@@ -121,7 +126,7 @@ Private Sub TestSpecificAlgorithm(ByVal currentAlgorithm As COMPRESS_ALGORITHM_E
                 If IsArrayPopulated(DecompressedData) Then
                     decompSize = GetArrayElementCount(DecompressedData)
                     Debug.Print "    DECOMPRESSION: Success. Decompressed Size = " & decompSize
-                    If decompSize = originalSize Then
+                    If decompSize = OriginalSize Then
                         If VerifyByteArrays(testData, DecompressedData) Then
                             Debug.Print "      Data Verification: MATCHES ORIGINAL"
                         Else
@@ -129,7 +134,7 @@ Private Sub TestSpecificAlgorithm(ByVal currentAlgorithm As COMPRESS_ALGORITHM_E
                             testCaseSuccess = False
                         End If
                     Else
-                        Debug.Print "      Data Verification: !!! MISMATCH SIZE (Original: " & originalSize & ", Decompressed: " & decompSize & ") !!!"
+                        Debug.Print "      Data Verification: !!! MISMATCH SIZE (Original: " & OriginalSize & ", Decompressed: " & decompSize & ") !!!"
                         testCaseSuccess = False
                     End If
                 Else
@@ -162,7 +167,7 @@ Private Sub TestEdgeCases()
     ' --- Test 1: Compress Empty Array ---
     Debug.Print "  Edge Case 1: Compressing Empty Array (MSZIP)"
     Erase CompressedData
-    CompressedData = CompressBytes(emptyArr, MSZIP)
+    CompressedData = Squash.CompressBytes(emptyArr, MSZIP)
     If IsArrayPopulated(CompressedData) Then
         Debug.Print "    Compress Empty: FAILED (Expected empty, Got " & GetArrayElementCount(CompressedData) & " bytes)"
     Else
@@ -172,7 +177,7 @@ Private Sub TestEdgeCases()
     ' --- Test 2: Decompress Empty Array ---
     Debug.Print "  Edge Case 2: Decompressing Empty Array (MSZIP)"
     Erase DecompressedData
-    DecompressedData = DecompressBytes(emptyArr, MSZIP)
+    DecompressedData = Squash.DecompressBytes(emptyArr, MSZIP)
     If IsArrayPopulated(DecompressedData) Then
         Debug.Print "    Decompress Empty: FAILED (Expected empty, Got " & GetArrayElementCount(DecompressedData) & " bytes)"
     Else
@@ -183,7 +188,7 @@ Private Sub TestEdgeCases()
     Debug.Print "  Edge Case 3: Decompressing Invalid Data (MSZIP)"
     tinyArr(0) = &H12 ' Just some random byte
     Erase DecompressedData
-    DecompressedData = DecompressBytes(tinyArr, MSZIP)
+    DecompressedData = Squash.DecompressBytes(tinyArr, MSZIP)
     If IsArrayPopulated(DecompressedData) Then
         Debug.Print "    Decompress Invalid: FAILED (Expected empty, Got " & GetArrayElementCount(DecompressedData) & " bytes)"
     Else
@@ -193,7 +198,7 @@ Private Sub TestEdgeCases()
     ' --- Test 4: IsCompressed on Empty/Invalid Data ---
     Dim algoCheck As COMPRESS_ALGORITHM_ENUM
     Debug.Print "  Edge Case 4: IsCompressed on Empty Array"
-    algoCheck = IsCompressed(emptyArr)
+    algoCheck = Squash.IsCompressed(emptyArr)
     If algoCheck = 0 Then ' Assuming 0 means not compressed / invalid
         Debug.Print "    IsCompressed Empty: PASSED (Returned " & algoCheck & ")"
     Else
@@ -201,7 +206,7 @@ Private Sub TestEdgeCases()
     End If
 
     Debug.Print "  Edge Case 5: IsCompressed on Invalid Data (1 byte)"
-    algoCheck = IsCompressed(tinyArr)
+    algoCheck = Squash.IsCompressed(tinyArr)
      If algoCheck = 0 Then
         Debug.Print "    IsCompressed Invalid (1 byte): PASSED (Returned " & algoCheck & ")"
     Else
@@ -294,4 +299,6 @@ Private Function BytesToHex(bytes As Variant, Optional MaxBytesToShow As Long = 
     Next k
     BytesToHex = Trim(s)
 End Function
+
+
 
